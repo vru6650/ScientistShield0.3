@@ -67,16 +67,23 @@ export default function ExecutionVisualizer() {
 
         const nodes = events.map((event, i) => {
             const lineContent = codeLines[event.line - 1]?.trim() || `Line ${event.line}`;
-            let type = 'statement';
-            if (/^function|=>/.test(lineContent)) type = 'function';
-            if (/^if|else/.test(lineContent)) type = 'decision';
-            if (/^for|while/.test(lineContent)) type = 'loop';
+            let type = event.event;
+            if (event.event === 'line') {
+                type = 'statement';
+                if (/^function|=>/.test(lineContent)) type = 'function';
+                if (/^if|else/.test(lineContent)) type = 'decision';
+                if (/^for|while/.test(lineContent)) type = 'loop';
+            }
+
+            let label = `L${event.line}: ${lineContent.substring(0, 25)}${lineContent.length > 25 ? '...' : ''}`;
+            if (event.event === 'call') label = `call ${event.func}`;
+            if (event.event === 'return') label = `return ${event.func}`;
 
             return {
                 id: i,
                 line: event.line,
-                label: `L${event.line}: ${lineContent.substring(0, 25)}${lineContent.length > 25 ? '...' : ''}`,
-                type: type,
+                label,
+                type,
             };
         });
 
@@ -107,6 +114,8 @@ export default function ExecutionVisualizer() {
                 case 'function': return '#22c55e'; // green-500
                 case 'decision': return '#f59e0b'; // amber-500
                 case 'loop': return '#3b82f6'; // blue-500
+                case 'call': return '#10b981'; // teal-500
+                case 'return': return '#f97316'; // orange-500
                 default: return '#6b7280'; // gray-500
             }
         };
@@ -319,11 +328,19 @@ export default function ExecutionVisualizer() {
                 )}
                 {currentStep >= 0 && events[currentStep] && (
                     <div className="mb-4">
-                        <p className="font-semibold">Step {currentStep + 1} of {events.length} (line {events[currentStep].line})</p>
+                        <p className="font-semibold">Step {currentStep + 1} of {events.length} ({events[currentStep].event} at line {events[currentStep].line})</p>
                         <h4 className="font-semibold mt-2">Local Variables:</h4>
                         <pre className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded max-h-24 overflow-auto">
                             <code>{JSON.stringify(events[currentStep].locals || {}, null, 2)}</code>
                         </pre>
+                        {events[currentStep].stack && (
+                            <>
+                                <h4 className="font-semibold mt-2">Call Stack:</h4>
+                                <pre className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded max-h-24 overflow-auto">
+                                    <code>{events[currentStep].stack.join(' -> ')}</code>
+                                </pre>
+                            </>
+                        )}
                     </div>
                 )}
                 <svg ref={svgRef}></svg>
