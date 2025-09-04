@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import * as d3 from 'd3';
 import LanguageSelector from './LanguageSelector';
+import VariablesWindow from './VariablesWindow';
 
 const defaultCodeSnippets = {
     javascript: `function greet(name) {
@@ -54,7 +55,7 @@ export default function ExecutionVisualizer() {
     // Advanced D3.js Flowchart Rendering
     useEffect(() => {
         const svg = d3.select(svgRef.current);
-        const width = svg.node().parentElement.clientWidth;
+        const width = svg.node().clientWidth || svg.node().parentElement.clientWidth;
         const height = 500;
         svg.attr('width', width).attr('height', height);
 
@@ -322,28 +323,32 @@ export default function ExecutionVisualizer() {
                     <input type="range" min={0} max={events.length - 1} value={currentStep} onChange={(e) => { setIsPlaying(false); setCurrentStep(Number(e.target.value)); }} className="w-full" />
                 </div>
             )}
-            <div className="relative p-4 bg-white dark:bg-gray-800 rounded shadow min-h-[550px] space-y-2 overflow-hidden">
+            <div className="relative p-4 bg-white dark:bg-gray-800 rounded shadow min-h-[550px] overflow-hidden">
                 {events.length === 0 && !isRunning && (
                     <p className="text-gray-500">Run the code to see the execution flowchart.</p>
                 )}
-                {currentStep >= 0 && events[currentStep] && (
-                    <div className="mb-4">
-                        <p className="font-semibold">Step {currentStep + 1} of {events.length} ({events[currentStep].event} at line {events[currentStep].line})</p>
-                        <h4 className="font-semibold mt-2">Local Variables:</h4>
-                        <pre className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded max-h-24 overflow-auto">
-                            <code>{JSON.stringify(events[currentStep].locals || {}, null, 2)}</code>
-                        </pre>
-                        {events[currentStep].stack && (
-                            <>
-                                <h4 className="font-semibold mt-2">Call Stack:</h4>
-                                <pre className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded max-h-24 overflow-auto">
-                                    <code>{events[currentStep].stack.join(' -> ')}</code>
-                                </pre>
-                            </>
+                {events.length > 0 && (
+                    <div className="flex gap-4 h-full">
+                        <svg ref={svgRef} className="flex-1"></svg>
+                        {currentStep >= 0 && events[currentStep] && (
+                            <div className="w-64 space-y-2">
+                                <p className="font-semibold">Step {currentStep + 1} of {events.length} ({events[currentStep].event} at line {events[currentStep].line})</p>
+                                <VariablesWindow
+                                    variables={events[currentStep].locals || {}}
+                                    prevVariables={events[currentStep - 1]?.locals || {}}
+                                />
+                                {events[currentStep].stack && (
+                                    <>
+                                        <h4 className="font-semibold">Call Stack</h4>
+                                        <pre className="text-sm bg-gray-100 dark:bg-gray-700 p-2 rounded max-h-24 overflow-auto">
+                                            <code>{events[currentStep].stack.join(' -> ')}</code>
+                                        </pre>
+                                    </>
+                                )}
+                            </div>
                         )}
                     </div>
                 )}
-                <svg ref={svgRef}></svg>
             </div>
             {(output || logs.length > 0) && (
                 <div className="p-4 bg-white dark:bg-gray-800 rounded shadow space-y-2">
