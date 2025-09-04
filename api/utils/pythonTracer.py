@@ -6,11 +6,21 @@ import runpy
 traces = []
 
 
+def build_stack(frame):
+    stack = []
+    while frame:
+        stack.append(frame.f_code.co_name)
+        frame = frame.f_back
+    return list(reversed(stack))
+
+
 def tracefunc(frame, event, arg):
-    if event == 'line':
+    if event in ('line', 'call', 'return'):
         traces.append({
-            'event': 'step',
+            'event': event,
             'line': frame.f_lineno,
+            'func': frame.f_code.co_name,
+            'stack': build_stack(frame),
             'locals': {k: repr(v) for k, v in frame.f_locals.items()},
         })
     return tracefunc
